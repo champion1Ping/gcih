@@ -1,5 +1,6 @@
 package offheap;
 
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
 import java.util.Collection;
@@ -15,27 +16,23 @@ public class OffHeapList<E> implements List<E>{
 
 	private static final  int DEFAULTSIZE = 16;
 	private int size;
-	private Pointer pointer;
+	private Memory pointer;
 	private Class type;
 	private boolean typeInit;
-	private int offset = 0;
-	private int[] offsetArray;//集合中每个元素的偏移量
-	 //存放集合中每个元素所含字段的偏移量，写入的时候可知道
 
 	private void ensureCapacityInternal(int minCapacity) {
 
 	}
 
 	public OffHeapList() {
-		pointer = CLibrary.INSTANCE.malloc(DEFAULTSIZE);
+		pointer = new Memory(DEFAULTSIZE);
 
 	}
 
 	public OffHeapList(int capacity){
 
 		if (capacity > 0) {
-			pointer = CLibrary.INSTANCE.malloc(size);
-			offsetArray = new int[capacity];
+			pointer = new Memory(capacity);
 		} else {
 			throw new IllegalArgumentException("Illegal Capacity:" + capacity);
 		}
@@ -78,16 +75,14 @@ public class OffHeapList<E> implements List<E>{
 			type = e.getClass();
 			typeInit = true;
 		}
-
-		int nextOffSet = OffHeapUtil.getOffsetByType(type, pointer, e, offset);
-		offsetArray[size] = offset;
-		offset += nextOffSet;
+		OffHeapUtil.addElement(type, pointer, e, size);
 		++size;
 		return true;
 	}
 
 	@Override
 	public boolean remove(Object o) {
+
 		return false;
 	}
 
@@ -122,10 +117,9 @@ public class OffHeapList<E> implements List<E>{
 	}
 
 	public E  get(int index) {
-		int elementOffSet = offsetArray[index];
+		int elementOffSet = index * CommonUtils.getLengthByType(type);
 
-		int nextElementOffSet = index + 1 < size ? offsetArray[index + 1] : 0;
-		return (E) OffHeapUtil.getValueByOffset(type, elementOffSet, pointer, nextElementOffSet, index);
+		return (E) OffHeapUtil.getValueByOffset(type, elementOffSet, pointer);
 
 
 	}
@@ -172,14 +166,26 @@ public class OffHeapList<E> implements List<E>{
 
 
 	public static void main(String[] args) {
+		//boolean类型测试
+		OffHeapList<Boolean> booleanList = new OffHeapList<>(5);
+		booleanList.add(true);
+		booleanList.add(false);
+		booleanList.add(true);
+		booleanList.add(false);
+		booleanList.add(false);
+		for(int i =0;i<booleanList.size;i++) {
+			System.out.println(booleanList.get(i));
+		}
 
-		OffHeapList<Integer> list = new OffHeapList<>(100);
-		list.add(33);
-		list.add(44);
+		/*int类型测试*/
+		OffHeapList<Integer> list = new OffHeapList<>(12);
+		list.add(99999);
+		list.add(88888);
+		list.add(77777);
 		for(int i =0; i < list.size;++i) {
 			System.out.println(list.get(i)+"  ");
 		}
-
+	   //double类型测试
 		OffHeapList<Double> dList = new OffHeapList<>(100);
 		dList.add(33.0d);
 		dList.add(66.0d);
@@ -187,6 +193,7 @@ public class OffHeapList<E> implements List<E>{
 		for(int i =0; i < dList.size;++i) {
 			System.out.println(dList.get(i)+"  ");
 		}
+		//String类型测试S
 		OffHeapList<String> sList = new OffHeapList<>(100);
 		sList.add("ping");
 		sList.add("an");
@@ -207,21 +214,9 @@ public class OffHeapList<E> implements List<E>{
 		aList.add(a2);
 		for(int i =0;i<aList.size;++i) {
 			Person t = aList.get(i);
-			System.out.println(t.getAge()+","+t.getName());
+//			System.out.println(t.getAge()+","+t.getName());
 		}
 
-		//类中是有单个String变量类型
-		OffHeapList<PersonWithName> stringList = new OffHeapList<>();
-		PersonWithName personWithName = new PersonWithName();
-		personWithName.setName("zhangping");
-		stringList.add(personWithName);
-		PersonWithName personWithName2 = new PersonWithName();
-		personWithName.setName("zhangping2");
-		stringList.add(personWithName2);
-		for(int i = 0;i < stringList.size; ++i) {
-			PersonWithName person = stringList.get(i);
-			System.out.println(person.getName());
-		}
 	}
 
 }

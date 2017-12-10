@@ -1,9 +1,6 @@
 package offheap;
 
-import com.sun.jna.Library;
-import com.sun.jna.Native;
-import com.sun.jna.Platform;
-import com.sun.jna.Pointer;
+import com.sun.jna.*;
 
 /**
  * Created by zhangping on 2017/10/13.
